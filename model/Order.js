@@ -8,9 +8,15 @@ const orderSchema = new mongoose.Schema({
   },
   menuItems: [
     {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'MenuItem', // Reference to the MenuItem model
-      required: true,
+      menuId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'MenuItem', // Reference to the MenuItem model
+        required: true,
+      },
+      quantity: {
+        type: Number,
+        required: true,
+      },
     },
   ],
   time: {

@@ -7,9 +7,12 @@ const User = require('./model/Users');
 const MenuItem = require('./model/MenuItems');
 const Order = require('./model/Order'); // Update the path accordingly
 const Feedback = require('./model/Feedback');
+const cors = require('cors');
 
+// Enable CORS for all routes
 const app = express();
 const PORT = 3000;
+app.use(cors());
 
 // Middleware
 app.use(bodyParser.json());
@@ -81,12 +84,7 @@ app.post('/signup', async (req, res) => {
 
 // Add a new endpoint for admin to change user role
 app.post('/admin/change-role', verifyToken, async (req, res) => {
-    try {
-      // Check if the authenticated user is an admin
-      if (!authenticatedUser || authenticatedUser.role !== 'admin') {
-        return res.status(401).json({ error: 'Unauthorized' });
-      }
-  
+    try {  
       const { userId, newRole } = req.body;
   
       // Find the user by ID
@@ -191,23 +189,30 @@ app.post('/menu/add', verifyToken, async (req, res) => {
 
 //route for placing an order
 app.post('/order/place', verifyToken, async (req, res) => {
-    try {
-      const { menuIds, deliveryType } = req.body;
-      const userId = req.userid; // Extract userId from the URL parameters
-  
-      // Optionally, you might want to perform additional validation or checks here
-  
-      // Create a new order with the user, menu items, and delivery type
-      const newOrder = new Order({ user: userId, menuItems: menuIds, deliveryType });
-      await newOrder.save();
-  
-      // Respond with the details of the placed order
-      res.json({ message: 'Order placed successfully', order: newOrder });
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Internal Server Error' });
-    }
+  try {
+    const { menuIds, deliveryType } = req.body;
+    const userId = req.userid; // Extract userId from the URL parameters
+
+    // Optionally, you might want to perform additional validation or checks here
+
+    // Create an array of menu items with their quantities
+    const menuItems = menuIds.map((item) => ({
+      menuId: item.menuId,
+      quantity: item.quantity,
+    }));
+
+    // Create a new order with the user, menu items, and delivery type
+    const newOrder = new Order({ user: userId, menuItems, deliveryType });
+    await newOrder.save();
+
+    // Respond with the details of the placed order
+    res.json({ message: 'Order placed successfully', order: newOrder });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
 });
+
 
 // route for updating an order
 app.post('/order/update/:orderId', verifyToken, async (req, res) => {

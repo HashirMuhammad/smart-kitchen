@@ -268,9 +268,43 @@ app.post('/feedback/:orderid', verifyToken, async (req, res) => {
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
-  
 
-// Endpoint for a rider to get order details
+// for rider  
+const getMenuItemsInfo = async (menuItems) => {
+  try {
+    const menuItemsIds = menuItems.map(item => item.menuId);
+    const menuItemsData = await MenuItem.find({ _id: { $in: menuItemsIds } });
+
+    const menuItemsInfo = [];
+    const menuItemsMap = new Map();
+
+    menuItems.forEach(orderItem => {
+      const menuItemData = menuItemsData.find(item => item._id.equals(orderItem.menuId));
+
+      if (menuItemData) {
+        const itemId = menuItemData._id.toString();
+        if (menuItemsMap.has(itemId)) {
+          // Item already exists, increment quantity
+          menuItemsMap.get(itemId).quantity += orderItem.quantity;
+        } else {
+          // New item, add to the map
+          menuItemsMap.set(itemId, {
+            id: itemId,
+            name: menuItemData.name,
+            quantity: orderItem.quantity,
+          });
+        }
+      }
+    });
+
+    menuItemsInfo.push(...menuItemsMap.values());
+    return menuItemsInfo;
+  } catch (error) {
+    console.error('Error fetching menu items info:', error);
+    return [];
+  }
+};
+
 app.get('/rider/:orderid', async (req, res) => {
   try {
     const { orderid } = req.params;
@@ -282,17 +316,81 @@ app.get('/rider/:orderid', async (req, res) => {
       return res.status(404).json({ error: 'Order not found' });
     }
 
-    // Assuming order.address and order.phoneNumber are strings
-    const address = order.address;
-    const phonenumber = order.phoneNumber;
+    // Get user details
+    const user = await User.findById(order.user);
+    const userName = user ? user.name : 'Unknown User';
 
-    res.json({ address, phonenumber });
+    // Get menu items names and quantities using the function
+    const menuItemsInfo = await getMenuItemsInfo(order.menuItems);
+
+    // Include additional details in the response
+    const enhancedOrder = {
+      ...order.toObject(),
+      userName,
+      menuItemsInfo,
+    };
+
+    res.json({ order: enhancedOrder });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: 'Internal Server Error' });
   }
 });
 
+// Get all orders
+// Helper function to get menu items info
+const getMenuItemsInfo2 = async (menuItems) => {
+  try {
+    const menuItemsIds = menuItems.map(item => item.menuId);
+    const menuItemsData = await MenuItem.find({ _id: { $in: menuItemsIds } });
+
+    const menuItemsInfo = [];
+    const menuItemsMap = new Map();
+
+    menuItems.forEach(orderItem => {
+      const menuItemData = menuItemsData.find(item => item._id.equals(orderItem.menuId));
+
+      if (menuItemData) {
+        const itemId = menuItemData._id.toString();
+        if (menuItemsMap.has(itemId)) {
+          // Item already exists, increment quantity
+          menuItemsMap.get(itemId).quantity += orderItem.quantity;
+        } else {
+          // New item, add to the map
+          menuItemsMap.set(itemId, {
+            id: itemId,
+            name: menuItemData.name,
+            quantity: orderItem.quantity,
+          });
+        }
+      }
+    });
+
+    menuItemsInfo.push(...menuItemsMap.values());
+    return menuItemsInfo;
+  } catch (error) {
+    console.error('Error fetching menu items info:', error);
+    return [];
+  }
+};
+
+// Get all orders
+app.get('/orders', async (req, res) => {
+  try {
+    const orders = await Order.find();
+    const ordersWithMenuItemsInfo = await Promise.all(orders.map(async (order) => {
+      const menuItemsInfo = await getMenuItemsInfo2(order.menuItems);
+      return {
+        ...order.toObject(),
+        menuItemsInfo,
+      };
+    }));
+    res.json({ orders: ordersWithMenuItemsInfo });
+  } catch (error) {
+    console.error('Error fetching orders:', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
 
 // Start the server
 app.listen(PORT, () => {

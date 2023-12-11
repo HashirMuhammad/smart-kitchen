@@ -142,7 +142,15 @@ app.get('/admin/users', verifyToken, async (req, res) => {
   
           // Include the role in the login response
           const role = email === 'hashirmuhammad73@gmail.com' ? 'admin' : 'client';
-          res.json({ message: 'Login successful', user: { ...user.toObject(), role }, token });
+
+// Check if the email is the specific one
+if (email === 'hashirmuhammad73@gmail.com') {
+  res.json({ message: 'Login successful', user: { ...user.toObject(), role }, token });
+} else {
+  // If the email is not the specific one, return the default role
+  res.json({ message: 'Login successful', user: { ...user.toObject(), role: user.role }, token });
+}
+
         } else {
           res.status(401).json({ error: 'Invalid credentials' });
         }

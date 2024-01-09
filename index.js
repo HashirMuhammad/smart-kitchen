@@ -162,6 +162,25 @@ if (email === 'hashirmuhammad73@gmail.com') {
       res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+  // Endpoint to delete a user by ID
+app.delete('/users/:id', async (req, res) => {
+  const userId = req.params.id;
+
+  try {
+
+    // Find and delete the user by ID
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: 'User not found.' });
+    }
+
+    res.json({ message: 'User deleted successfully.' });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
   
 
 // get menu
